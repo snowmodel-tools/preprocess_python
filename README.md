@@ -7,16 +7,19 @@ Notebook to create a JSON containing bounding parameters for all modeling domain
 # The notebooks should be completed in the following order for each modeling domain:
 
 ##       1. Fetch_SNOTEL_CSO.ipynb
+Notebook to build json to save domain information. Add new domains here. 
+
+##       2. Fetch_SNOTEL_CSO.ipynb
 Notebook to get SNOTEL station data within a modeling domain.
 
-##       2. Build_SnowModel_line_file.ipynb
+##       3. Build_SnowModel_line_file.ipynb
 Notebook to create file to run SnowModel in line mode for calibration.
-
-##       3. Baseline_par2json.ipynb
-Notebook to extract .par values and save them to a JSON. 
 
 
 (optional notebooks)
+
+##       Baseline_par2json.ipynb
+Notebook to extract .par values and save them to a JSON. 
 
 ##       Explore_SNOTEL.ipynb
 Notebook to examine SNOTEL stations within a modeling domain.
