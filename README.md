@@ -20,7 +20,8 @@ Files saved out:
 * snowmodel_line_pts.dat
 * .asc of line dem values
 * .asc of line veg values
-
+* .asc of line lat values
+* .asc of line lon values
 
 ## (optional notebooks)
 
