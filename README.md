@@ -1,19 +1,25 @@
 # preprocess_python
 This is a location for python code used to acquire and format data for a SnowModel run. 
 
-####       DomainBounds_2json 
-Notebook to create a JSON containing bounding parameters for all modeling domains.
-
 ## The notebooks should be completed in the following order for each modeling domain:
 
-####       1. Fetch_SNOTEL_CSO.ipynb
-Notebook to build json to save domain information. Add new domains here. 
+####       1. DomainBounds_2json.ipynb
+Notebook to create a JSON containing bounding parameters for all modeling domains. Add new domains here. 
 
 ####       2. Fetch_SNOTEL_CSO.ipynb
 Notebook to get SNOTEL station data within a modeling domain.
 
+Files saved out:
+* .geojson of SNOTEL stations within modeling domain
+* .csv of swe and snow depth data for SNOTEL stations over time period of interest
+
 ####       3. Build_SnowModel_line_file.ipynb
-Notebook to create file to run SnowModel in line mode for calibration.
+Notebook to create files to run SnowModel in line mode for calibration.
+
+Files saved out:
+* snowmodel_line_pts.dat
+* .asc of line dem values
+* .asc of line veg values
 
 
 ## (optional notebooks)
