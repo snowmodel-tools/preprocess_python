@@ -1,6 +1,22 @@
 # preprocess_python
 This is a location for python code used to acquire and format data for a SnowModel run. 
 
+Preprocess inputs:
+* DEM data
+* NLCD landcover data
+* Meteorological data (hourly, 3-hourly, or 6-hourly):
+  * elevation of met nodes [m]
+  * surface air temperature [C]
+  * wind speed [m/s]
+  * precipitation [mm/timestep]
+  * wind direction [deg]
+    * NOTE: can use u-wind and v-wind to calculate wind speed and direction
+  * RH [%]
+    * NOTE: can use specific humidity and surface pressure to calculate RH
+ * PRISM data
+  * mean monthly temperature
+  * mean monthly precipitaiton 
+
 ## The notebooks should be completed in the following order for each modeling domain:
 
 ####       1. DomainBounds_2json.ipynb
