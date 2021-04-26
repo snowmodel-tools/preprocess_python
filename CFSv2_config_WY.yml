@@ -1,0 +1,27 @@
+# Configuration file for Wyoming (WY) domain
+
+geo:
+  # Geographical bounding box
+  bbox:
+    south: 42.363116
+    west: -111.155208
+    north: 44.582480
+    east: -109.477849
+
+    # bbox buffering
+    buffer_east: 1   # From Ryan's GEE code: 0.50
+    buffer_north: 1  # From Ryan's GEE code: 0.25
+
+  # Reprojection and resampling settings
+  to_epsg_crs: '32612'
+  to_resolution: 22200  # in meters
+  # to_resolution = 15000
+
+# Date range
+start_date: '2019-11-01'
+end_date:   '2019-11-05'
+# start_date, end_date = '2020-11-05', '2020-11-07'
+# start_date, end_date = '2018-08-31 20:00', '2018-09-03'
+
+# Output file name
+nc_export_fname: 'CFSv2_OperationalAnalysis_WY_2019-11-TEST-small.nc'
