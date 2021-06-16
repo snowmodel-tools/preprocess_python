@@ -1,4 +1,6 @@
 """coding: utf-8
+Extract and transform CFSv2 output subsets from NCEI THREDDS server,
+then save to a netcdf file.
 
 4/25-22/2021
 
@@ -6,14 +8,24 @@ TODO:
 - Pass the config yml file name as a run-time argument
 - Add option to provide output directory path?
 - Abstract the main function a bit (move chunks to functions)
+- `snowmodelaws` env is on Py3.6 b/c of ulmo! Once I issue a new release, we'll be able to move to 3.8 or 3.9
 - Implement tenacity-based (formerly retrying) checking for siphon/remote errors, and retrying
+- From 3/22/2021: Add error catching to `get_subset_as_xrds`, to log and retry datasets (files) that 
+ran into a failure during processing. The failure is typically on the NCEI TDS server end. 
+This is the latest error, that's likely to be common:
 
-# # Extract and transform CFSv2 output subsets from NCEI THREDDS server
-# 
+~/miniconda/envs/snowmodelaws/lib/python3.6/site-packages/siphon/http_util.py in get(self, path, params)
+    485                                      'Server Error ({1:d}: {2})'.format(resp.request.url,
+    486                                                                         resp.status_code,
+--> 487                                                                         text))
+    488         return resp
+
+HTTPError: Error accessing https://www.ncei.noaa.gov/thredds/ncss/model-cfs_v2_anl_6h_flxf/2019/201911/20191126/cdas1.t00z.sfluxgrbf06.grib2/dataset.xml
+Server Error (502: Proxy Error)
+
+
 # - 2021, 3/29: Successfully ran 30 days, 2019-11-01 to 2019-11-30. The server-side step (cell 11, which runs `get_subset_as_xrds`) took ~ 16 min ("CPU times: user 31 s, sys: 4.01 s, total: 35 s. Wall time: 15min 45s"). So, that's roughly 0.5 min per model day.
-# - 2021, 3/22: It's working again!?
-# - 2021: 3/10,7, 2/17,12
-# - 2020: 12/16, 11-16,5. https://github.com/emiliom/
+# - 2020: 11-16,5. https://github.com/emiliom/
 # - Run with conda environment https://github.com/snowmodel-tools/postprocess_python/blob/master/snowmodelaws_env.yml
 # 
 # Define and execute a remote request for CFSv2 model output. The user specifies the geographic bounding box (in lat-lon coordinates), the output projection (as EPSG code) and cell resolution (in meters), and the date range.
@@ -28,41 +40,18 @@ TODO:
 # 6. Reproject and resample to the desired UTM projection.
 # 7. Export to netcdf file
 # 
-# - Currently the code uses this model product: [CFSv2 Operational Analysis - 6-Hourly Surface and Radiative Fluxes (FLX)](https://www.ncdc.noaa.gov/data-access/model-data/model-datasets/climate-forecast-system-version2-cfsv2#CFSv2%20Operational%20Analysis).
+# - Currently the code uses this model product: CFSv2 Operational Analysis - 6-Hourly Surface and Radiative Fluxes (FLX),
+#   https://www.ncdc.noaa.gov/data-access/model-data/model-datasets/climate-forecast-system-version2-cfsv2#CFSv2%20Operational%20Analysis
 # - For additional background on CFSv2 see https://github.com/snowmodel-tools/preprocess_python/issues/17
-# - CSO GEE JavaScript code used: https://github.com/snowmodel-tools/preprocess_javascript/blob/master/define_SM_inputs.js
-
-# ## TO-DOs
-# 3/22/2021
-# 
-# - `snowmodelaws` env is on Py3.6 b/c of ulmo! Once I issue a new release, we'll be able to move to 3.8 or 3.9
-# - Add error catching to `get_subset_as_xrds`, to log and retry datasets (files) that ran into a failure during processing. The failure is typically on the NCEI TDS server end. This is the latest error, that's likely to be common:
-# 
-# ```python
-# ~/miniconda/envs/snowmodelaws/lib/python3.6/site-packages/siphon/http_util.py in get(self, path, params)
-#     485                                      'Server Error ({1:d}: {2})'.format(resp.request.url,
-#     486                                                                         resp.status_code,
-# --> 487                                                                         text))
-#     488         return resp
-#     489 
-# 
-# HTTPError: Error accessing https://www.ncei.noaa.gov/thredds/ncss/model-cfs_v2_anl_6h_flxf/2019/201911/20191126/cdas1.t00z.sfluxgrbf06.grib2/dataset.xml
-# Server Error (502: Proxy Error)
-# ```
 """
 
-from datetime import datetime, timedelta
-
 import yaml
-import dateutil
-from dateutil.parser import parse as duparse
 import pandas as pd
-from siphon.catalog import TDSCatalog
 import xarray as xr
 from xarray.backends import NetCDF4DataStore
-from pyproj import CRS
 from rasterio.warp import Resampling
-import rioxarray
+import rioxarray  # noqa
+from siphon.catalog import TDSCatalog
 
 
 # CFSv2 variables used
@@ -161,6 +150,7 @@ def main():
 
     # Output file name
     nc_export_fname = config['nc_export_fname']
+    nc_export_fdir = config['nc_export_fdir']
 
     # Create a sligthly larger box for the data query, relative to geobbox
     buffered_geobbox = geobbox.copy()
@@ -203,12 +193,6 @@ def main():
     # The concatenation step assumes the datasets in `data_ds_lst` were added in 
     # ascending chronological order, which has been the case so far.
     data_ds = concatds_cleanup(data_ds_lst, crs='epsg:4326')
-
-    # ### Explore the resulting dataset
-    def print_cellsizes(dimcoord, i):
-        return dimcoord.values[i+1] - dimcoord.values[i]
-
-    # print_cellsizes(data_ds.lon, 0), print_cellsizes(data_ds.lat, 0), print_cellsizes(data_ds.lat, 1)
     # ----------------------------------------
 
     # ## Reproject and resample dataset
