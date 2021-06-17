@@ -1,19 +1,49 @@
 """coding: utf-8
+Extract and transform CFSv2 output subsets from NCEI THREDDS server,
+then save to a netcdf file.
 
+Run as: python CFSv2_fromNCEI_TDS.py <configfile.yml>
+where <configfile.yml> is the name of the Yaml configuration file,
+which must be located in the same directory as the Python script
+
+6/16/2021
 4/25-22/2021
 
 TODO:
-- Pass the config yml file name as a run-time argument
-- Add option to provide output directory path?
-- Abstract the main function a bit (move chunks to functions)
+- Go over time stamp explanations from emails with NWS in January-February, and apply correction
+  offsets as needed
+- DONE. Pass the config yml file name as a run-time argument
+- DONE. Add option to provide output directory path?
+- DONE. Abstract the main function a bit (move chunks to functions)
+- `snowmodelaws` env is on Py3.6 b/c of ulmo! Once I issue a new release, we'll be able to move to 3.8 or 3.9
+- Add a run-time mode (via an argument) that rather than process the data files, would crawl through the
+  THREDDS catalog to confirm that all the desired (date range) files exist, or print out / log the ones
+  that failed (and which HTTP error was generated). Doing that should be quick and ultimately save time
+  by identifying a gap in advance
 - Implement tenacity-based (formerly retrying) checking for siphon/remote errors, and retrying
+- From 3/22/2021: Add error catching to `get_subset_as_xrds`, to log and retry datasets (files) that 
+ran into a failure during processing. The failure is typically on the NCEI TDS server end. 
+This is the latest error, that's likely to be common:
+~/miniconda/envs/snowmodelaws/lib/python3.6/site-packages/siphon/http_util.py in get(self, path, params)
+    485                                      'Server Error ({1:d}: {2})'.format(resp.request.url,
+    486                                                                         resp.status_code,
+--> 487                                                                         text))
+    488         return resp
+HTTPError: Error accessing https://www.ncei.noaa.gov/thredds/ncss/model-cfs_v2_anl_6h_flxf/2019/201911/20191126/cdas1.t00z.sfluxgrbf06.grib2/dataset.xml
+Server Error (502: Proxy Error)
 
-# # Extract and transform CFSv2 output subsets from NCEI THREDDS server
-# 
+  File "CFSv2_fromNCEI_TDS.py", line 190, in tds_query
+    cfsv2_cat = TDSCatalog(f"{tds_base_url}/{day:%Y}/{day:%Y%m}/{day:%Y%m%d}/catalog.xml")
+  File "/home/mayorga/miniconda/envs/snowmodelaws/lib/python3.6/site-packages/siphon/catalog.py", line 257, in __init__
+    resp.raise_for_status()
+  File "/home/mayorga/.local/lib/python3.6/site-packages/requests/models.py", line 941, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 404 Client Error:  for url: 
+https://www.ncei.noaa.gov/thredds/catalog/model-cfs_v2_anl_6h_flxf/2021/202104/20210406/catalog.xml
+
+
 # - 2021, 3/29: Successfully ran 30 days, 2019-11-01 to 2019-11-30. The server-side step (cell 11, which runs `get_subset_as_xrds`) took ~ 16 min ("CPU times: user 31 s, sys: 4.01 s, total: 35 s. Wall time: 15min 45s"). So, that's roughly 0.5 min per model day.
-# - 2021, 3/22: It's working again!?
-# - 2021: 3/10,7, 2/17,12
-# - 2020: 12/16, 11-16,5. https://github.com/emiliom/
+# - 2020: 11-16,5. https://github.com/emiliom/
 # - Run with conda environment https://github.com/snowmodel-tools/postprocess_python/blob/master/snowmodelaws_env.yml
 # 
 # Define and execute a remote request for CFSv2 model output. The user specifies the geographic bounding box (in lat-lon coordinates), the output projection (as EPSG code) and cell resolution (in meters), and the date range.
@@ -28,41 +58,21 @@ TODO:
 # 6. Reproject and resample to the desired UTM projection.
 # 7. Export to netcdf file
 # 
-# - Currently the code uses this model product: [CFSv2 Operational Analysis - 6-Hourly Surface and Radiative Fluxes (FLX)](https://www.ncdc.noaa.gov/data-access/model-data/model-datasets/climate-forecast-system-version2-cfsv2#CFSv2%20Operational%20Analysis).
+# - Currently the code uses this model product: CFSv2 Operational Analysis - 6-Hourly Surface and Radiative Fluxes (FLX),
+#   https://www.ncdc.noaa.gov/data-access/model-data/model-datasets/climate-forecast-system-version2-cfsv2#CFSv2%20Operational%20Analysis
 # - For additional background on CFSv2 see https://github.com/snowmodel-tools/preprocess_python/issues/17
-# - CSO GEE JavaScript code used: https://github.com/snowmodel-tools/preprocess_javascript/blob/master/define_SM_inputs.js
-
-# ## TO-DOs
-# 3/22/2021
-# 
-# - `snowmodelaws` env is on Py3.6 b/c of ulmo! Once I issue a new release, we'll be able to move to 3.8 or 3.9
-# - Add error catching to `get_subset_as_xrds`, to log and retry datasets (files) that ran into a failure during processing. The failure is typically on the NCEI TDS server end. This is the latest error, that's likely to be common:
-# 
-# ```python
-# ~/miniconda/envs/snowmodelaws/lib/python3.6/site-packages/siphon/http_util.py in get(self, path, params)
-#     485                                      'Server Error ({1:d}: {2})'.format(resp.request.url,
-#     486                                                                         resp.status_code,
-# --> 487                                                                         text))
-#     488         return resp
-#     489 
-# 
-# HTTPError: Error accessing https://www.ncei.noaa.gov/thredds/ncss/model-cfs_v2_anl_6h_flxf/2019/201911/20191126/cdas1.t00z.sfluxgrbf06.grib2/dataset.xml
-# Server Error (502: Proxy Error)
-# ```
 """
 
-from datetime import datetime, timedelta
+import argparse
+from pathlib import Path
 
 import yaml
-import dateutil
-from dateutil.parser import parse as duparse
 import pandas as pd
-from siphon.catalog import TDSCatalog
 import xarray as xr
 from xarray.backends import NetCDF4DataStore
-from pyproj import CRS
 from rasterio.warp import Resampling
-import rioxarray
+import rioxarray  # noqa
+from siphon.catalog import TDSCatalog
 
 
 # CFSv2 variables used
@@ -78,8 +88,53 @@ VARIABLE_NAMES = [
     'Downward_Short-Wave_Radiation_Flux_surface_6_Hour_Average',
 ]
 
+
+def read_config(config_yml):
+    """Read and parse run-time yaml configuration file
+
+    Args:
+        config_yml (string): File name for yaml configuration file
+    
+    Returns a dictionary
+    """
+    with open(config_yml, 'r') as f:
+        config = yaml.safe_load(f)
+
+    # Geo
+    geobbox = dict(
+        south=config['geo']['bbox']['south'],
+        west=config['geo']['bbox']['west'],
+        north=config['geo']['bbox']['north'],
+        east=config['geo']['bbox']['east'],
+    )
+
+    to_crs = f"epsg:{config['geo']['to_epsg_crs']}"
+    to_resolution = config['geo']['to_epsg_crs']
+
+    # Create a sligthly larger box for the data query, relative to geobbox
+    buffered_geobbox = geobbox.copy()
+    buffered_geobbox['south'] = geobbox['south'] - config['geo']['bbox']['buffer_north']
+    buffered_geobbox['north'] = geobbox['north'] + config['geo']['bbox']['buffer_north']
+    buffered_geobbox['west'] = geobbox['west'] - config['geo']['bbox']['buffer_east']
+    buffered_geobbox['east'] = geobbox['east'] + config['geo']['bbox']['buffer_east']
+
+    config_out = dict(
+        to_crs=to_crs,
+        to_resolution=to_resolution,
+        geobbox=geobbox,
+        buffered_geobbox=buffered_geobbox,
+        start_date=config['start_date'],
+        end_date=config['end_date'],
+        nc_export_fname=config['nc_export_fname'],
+        nc_export_fdir=config['nc_export_fdir']
+    )
+
+    return config_out
+
+
 def get_subset_as_xrds(tds_ds, var_lst, bbox):
     """ Request a geographical and variable subset for the specified dataset (one time step).
+
     Returns an xarray dataset.
     """
     # Interface with the data through the NetCDF Subset Service (NCSS)
@@ -108,7 +163,6 @@ def concatds_cleanup(ds_lst, crs, grid_mapping_name='crs'):
     - Remove (squeeze) those dimensions from the variables currently using them
     - Remove the coordinate variables themselves
     """
-    
     # Assumes the data variables returned use two identical time dimensions, 'time' and 'time1'
     # Concatenate on time1, drop the orphaned time dim, then rename time1 to time
     ds = xr.concat(ds_lst, dim='time1').drop_vars('GaussLatLon_Projection')
@@ -138,63 +192,32 @@ def concatds_cleanup(ds_lst, crs, grid_mapping_name='crs'):
     return ds
 
 
-def main():
-    # ## Data request and filtering
-    # Includes filtering and selection scheme.
-
+def tds_query(config):
+    """ Construct and execute the query
+    Step through days in the date range, setting the `TDSCatalog` for each day, then stepping 
+    through the 4 model time steps ("model cycles"). The path to the `TDSCatalog` is constructed 
+    dynamically based on the date; the path to each `grib2` dataset is also constructed dynamically.
+    https://www.ncei.noaa.gov/thredds/catalog/model-cfs_v2_anl_6h_flxf/2018/201808/20180831/catalog.html?dataset=cfs_v2_anl_6h_flxf/2018/201808/20180831/cdas1.t00z.sfluxgrbf06.grib2
+    https://www.ncei.noaa.gov/thredds/ncss/model-cfs_v2_anl_6h_flxf/2018/201808/20180831/cdas1.t00z.sfluxgrbf06.grib2/dataset.xml
+    """
+    # THREDDS (TDS) catalog endpoint url
     tds_base_url = "https://www.ncei.noaa.gov/thredds/catalog/model-cfs_v2_anl_6h_flxf"
-
-    # Read run-time configuration from yaml file
-    with open("CFSv2_config_WY.yml", 'r') as f:
-        config = yaml.safe_load(f)
-
-    # Geo
-    geobbox = dict(
-        south=config['geo']['bbox']['south'],
-        west=config['geo']['bbox']['west'],
-        north=config['geo']['bbox']['north'],
-        east=config['geo']['bbox']['east'],
-    )
-
-    to_crs = f"epsg:{config['geo']['to_epsg_crs']}"
-    to_resolution = config['geo']['to_epsg_crs']
-
-    # Output file name
-    nc_export_fname = config['nc_export_fname']
-
-    # Create a sligthly larger box for the data query, relative to geobbox
-    buffered_geobbox = geobbox.copy()
-    buffered_geobbox['south'] = geobbox['south'] - config['geo']['bbox']['buffer_north']
-    buffered_geobbox['north'] = geobbox['north'] + config['geo']['bbox']['buffer_north']
-    buffered_geobbox['west'] = geobbox['west'] - config['geo']['bbox']['buffer_east']
-    buffered_geobbox['east'] = geobbox['east'] + config['geo']['bbox']['buffer_east']
-    # ----------------------------------------
-
-    # ### Construct and execute the query
-    # 
-    # Step through days in the date range, setting the `TDSCatalog` for each day, then stepping 
-    # through the 4 model time steps ("model cycles"). The path to the `TDSCatalog` is constructed 
-    # dynamically based on the date; the path to each `grib2` dataset is also constructed dynamically.
-
-    # https://www.ncei.noaa.gov/thredds/catalog/model-cfs_v2_anl_6h_flxf/2018/201808/20180831/catalog.html?dataset=cfs_v2_anl_6h_flxf/2018/201808/20180831/cdas1.t00z.sfluxgrbf06.grib2
-    # 
-    # https://www.ncei.noaa.gov/thredds/ncss/model-cfs_v2_anl_6h_flxf/2018/201808/20180831/cdas1.t00z.sfluxgrbf06.grib2/dataset.xml
 
     data_ds_lst = []
     for day in pd.date_range(start=config['start_date'], end=config['end_date']):
         print(day)
         cfsv2_cat = TDSCatalog(f"{tds_base_url}/{day:%Y}/{day:%Y%m}/{day:%Y%m%d}/catalog.xml")
-        # NOTE: THIS SCHEME WILL PULL ENTIRE DAYS' WORTH OF DATA; IT DOES NOT REFINE THE QUERY BY TIME
+        # THIS SCHEME WILL PULL ENTIRE DAYS' WORTH OF DATA; IT DOES NOT REFINE THE QUERY BY TIME
         # Step through time steps (UTC times)
         fts = 6
         for t in [0, 6, 12, 18]:
             grb2_fname = f"cdas1.t{t:02d}z.sfluxgrbf{fts:02d}.grib2"
             print(f"    {grb2_fname}")
             grb2_tds = cfsv2_cat.datasets[grb2_fname]
-            xrds = get_subset_as_xrds(grb2_tds, VARIABLE_NAMES, buffered_geobbox)
+            xrds = get_subset_as_xrds(grb2_tds, VARIABLE_NAMES, config['buffered_geobbox'])
             for v in VARIABLE_NAMES:
-                # Most of the variables are assigned time1, so it should be more efficient 
-                # to rename on 'time'
+                # Most of the variables are assigned time1, 
+                # so it should be more efficient to rename on 'time'
                 if 'time' in xrds[v].dims:
                     xrds[v] = xrds[v].rename({'time': 'time1'})
             
@@ -204,35 +227,56 @@ def main():
     # ascending chronological order, which has been the case so far.
     data_ds = concatds_cleanup(data_ds_lst, crs='epsg:4326')
 
-    # ### Explore the resulting dataset
-    def print_cellsizes(dimcoord, i):
-        return dimcoord.values[i+1] - dimcoord.values[i]
+    return data_ds
 
-    # print_cellsizes(data_ds.lon, 0), print_cellsizes(data_ds.lat, 0), print_cellsizes(data_ds.lat, 1)
-    # ----------------------------------------
 
-    # ## Reproject and resample dataset
+def reproject_resample(ds, config):
+    """ Reproject and resample dataset
+    """
     x_name = 'easting'
     y_name = 'northing'
 
-    # resampling=Resampling.bilinear
-    data_reproj_ds = data_ds.rio.reproject(to_crs, resolution=to_resolution, resampling=Resampling.nearest)
-    data_reproj_ds = (
-        data_reproj_ds
+    # When the reprojected resolution was set to 20km (possibly coarser than the 
+    # original resolution), some cells were set to the _FillValue but xarray 
+    # didn't seem to properly apply the _FillValue
+    # Alternative resampling scheme: Resampling.bilinear
+    reproj_ds = ds.rio.reproject(
+        config['to_crs'], 
+        resolution=config['to_resolution'], 
+        resampling=Resampling.nearest
+    )
+    reproj_ds = (
+        reproj_ds
         .rio.set_spatial_dims('x', 'y')
         .rename({"x": x_name, "y": y_name}) 
     )
 
-    data_reproj_ds[x_name].attrs['long_name'] = 'Easting'
-    data_reproj_ds[y_name].attrs['long_name'] = 'Northing'
+    reproj_ds[x_name].attrs['long_name'] = 'Easting'
+    reproj_ds[y_name].attrs['long_name'] = 'Northing'
 
-    # NOTE: When the reprojected resolution was set to 20km (possibly coarser than the 
-    # original resolution), some cells were set to the `_FillValue` but xarray didn't seem 
-    # to properly apply the `_FillValue`.
-    # ----------------------------------------
+    return reproj_ds
 
-    # ## Export to netcdf
-    data_reproj_ds.to_netcdf(nc_export_fname)
+
+def main():
+    """ CFSv2 data request, filtering, reprojection and export to netcdf
+    """
+
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("configyml", help="Name of Yaml config file")
+    args = argparser.parse_args()
+
+    # Read run-time configuration from yaml file
+    config = read_config(args.configyml)
+
+    # Construct and execute the query
+    data_ds = tds_query(config)
+
+    # Reproject and resample dataset
+    data_reproj_ds = reproject_resample(data_ds, config)
+
+    # Export to netcdf
+    nc_fpth = Path(config['nc_export_fdir']) / config['nc_export_fname']
+    data_reproj_ds.to_netcdf(nc_fpth)
 
 
 if __name__ == '__main__':

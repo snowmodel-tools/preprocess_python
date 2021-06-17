@@ -18,10 +18,11 @@ geo:
   # to_resolution = 15000
 
 # Date range
-start_date: '2019-11-01'
-end_date:   '2019-11-05'
+start_date: '2021-05-01'
+end_date:   '2021-05-10'
 # start_date, end_date = '2020-11-05', '2020-11-07'
 # start_date, end_date = '2018-08-31 20:00', '2018-09-03'
 
-# Output file name
-nc_export_fname: 'CFSv2_OperationalAnalysis_WY_2019-11-TEST-small.nc'
+# Output file name and directory path
+nc_export_fname: 'CFSv2_OperationalAnalysis_WY_2021-05.nc'
+nc_export_fdir: './tests'
