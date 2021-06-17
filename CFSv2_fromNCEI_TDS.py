@@ -6,7 +6,7 @@ then save to a netcdf file.
 4/25-22/2021
 
 TODO:
-- Pass the config yml file name as a run-time argument
+- DONE. Pass the config yml file name as a run-time argument
 - DONE. Add option to provide output directory path?
 - DONE. Abstract the main function a bit (move chunks to functions)
 - `snowmodelaws` env is on Py3.6 b/c of ulmo! Once I issue a new release, we'll be able to move to 3.8 or 3.9
@@ -21,6 +21,15 @@ This is the latest error, that's likely to be common:
     488         return resp
 HTTPError: Error accessing https://www.ncei.noaa.gov/thredds/ncss/model-cfs_v2_anl_6h_flxf/2019/201911/20191126/cdas1.t00z.sfluxgrbf06.grib2/dataset.xml
 Server Error (502: Proxy Error)
+
+  File "CFSv2_fromNCEI_TDS.py", line 190, in tds_query
+    cfsv2_cat = TDSCatalog(f"{tds_base_url}/{day:%Y}/{day:%Y%m}/{day:%Y%m%d}/catalog.xml")
+  File "/home/mayorga/miniconda/envs/snowmodelaws/lib/python3.6/site-packages/siphon/catalog.py", line 257, in __init__
+    resp.raise_for_status()
+  File "/home/mayorga/.local/lib/python3.6/site-packages/requests/models.py", line 941, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 404 Client Error:  for url: 
+https://www.ncei.noaa.gov/thredds/catalog/model-cfs_v2_anl_6h_flxf/2021/202104/20210406/catalog.xml
 
 
 # - 2021, 3/29: Successfully ran 30 days, 2019-11-01 to 2019-11-30. The server-side step (cell 11, which runs `get_subset_as_xrds`) took ~ 16 min ("CPU times: user 31 s, sys: 4.01 s, total: 35 s. Wall time: 15min 45s"). So, that's roughly 0.5 min per model day.
@@ -44,6 +53,7 @@ Server Error (502: Proxy Error)
 # - For additional background on CFSv2 see https://github.com/snowmodel-tools/preprocess_python/issues/17
 """
 
+import argparse
 from pathlib import Path
 
 import yaml
@@ -241,9 +251,12 @@ def main():
     """ CFSv2 data request, filtering, reprojection and export to netcdf
     """
 
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("configyml", help="Name of Yaml config file")
+    args = argparser.parse_args()
+
     # Read run-time configuration from yaml file
-    config_yml_fname = "CFSv2_config_WY.yml"
-    config = read_config(config_yml_fname)
+    config = read_config(args.configyml)
 
     # Construct and execute the query
     data_ds = tds_query(config)
