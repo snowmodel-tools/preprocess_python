@@ -2,14 +2,24 @@
 Extract and transform CFSv2 output subsets from NCEI THREDDS server,
 then save to a netcdf file.
 
+Run as: python CFSv2_fromNCEI_TDS.py <configfile.yml>
+where <configfile.yml> is the name of the Yaml configuration file,
+which must be located in the same directory as the Python script
+
 6/16/2021
 4/25-22/2021
 
 TODO:
+- Go over time stamp explanations from emails with NWS in January-February, and apply correction
+  offsets as needed
 - DONE. Pass the config yml file name as a run-time argument
 - DONE. Add option to provide output directory path?
 - DONE. Abstract the main function a bit (move chunks to functions)
 - `snowmodelaws` env is on Py3.6 b/c of ulmo! Once I issue a new release, we'll be able to move to 3.8 or 3.9
+- Add a run-time mode (via an argument) that rather than process the data files, would crawl through the
+  THREDDS catalog to confirm that all the desired (date range) files exist, or print out / log the ones
+  that failed (and which HTTP error was generated). Doing that should be quick and ultimately save time
+  by identifying a gap in advance
 - Implement tenacity-based (formerly retrying) checking for siphon/remote errors, and retrying
 - From 3/22/2021: Add error catching to `get_subset_as_xrds`, to log and retry datasets (files) that 
 ran into a failure during processing. The failure is typically on the NCEI TDS server end. 
