@@ -29,7 +29,7 @@ TIFpath = 'GEE_Downloads/'
 
 # DOMAIN
 # choose the modeling domain
-domain = 'WY'
+domain = 'CO_N'
 
 # path to directory where you want your output .tif and .asc files
 dataPath = '/nfs/attic/dfh/Aragon2/CSOdmn/'+domain+'/'
@@ -84,9 +84,9 @@ def get_topoveg(domain, OUTpath):
     
     # download 30m SRTM data
     #// NOTE: This only covers through 60 degrees latitude. See visualization layers.
-    SRTM30 = ee.Image('CGIAR/SRTM90_V4')#ee.Image('USGS/SRTMGL1_003')
+    SRTM30 = ee.Image('USGS/SRTMGL1_003')
     #image = SRTM30.clip(my_domain).unmask()
-    filename = os.path.join(OUTpath, 'DEM'+domain+'.tif')
+    filename = os.path.join(OUTpath, 'DEM_'+domain+'.tif')
     geemap.ee_export_image(SRTM30, filename=filename, scale=sm_resolution, region=my_domain, crs = epsg_code)
     
     # download NLCD data
@@ -97,7 +97,7 @@ def get_topoveg(domain, OUTpath):
     #// Create a single image out of the image collection using the most common land cover 
     #// designation from the previous 5 years.
     lcsingle=landcoverfiltered.mode();
-    filename = os.path.join(OUTpath, 'NLCD2016'+domain+'.tif')
+    filename = os.path.join(OUTpath, 'NLCD2016_'+domain+'.tif')
     geemap.ee_export_image(lcsingle, filename=filename, scale=sm_resolution, region=my_domain, file_per_band=False, crs = epsg_code)
 
 
@@ -215,8 +215,8 @@ def LTLN2SM(INfile,OUTpath):
 
     #ascii header 
     head = "ncols "+str(da.shape[2])+"\n"     "nrows "+str(da.shape[1])+"\n"     "xllcorner     "+str(int(min(da.x.values)-da.res[0]/2))+"\n"     "yllcorner     "+str(int(min(da.y.values)-da.res[0]/2))+"\n"     "cellsize      "+str(int(da.res[0]))+"\n"     "NODATA_value  -9999"
-    np.savetxt(OUTpath+'grid_lat.asc', lat, fmt='%2.5f', header = head,comments='')
-    np.savetxt(OUTpath+'grid_lon.asc', lon, fmt='%4.5f', header = head,comments='')
+    np.savetxt(OUTpath+'grid_lat_'+domain+'.asc', lat, fmt='%2.5f', header = head,comments='')
+    np.savetxt(OUTpath+'grid_lon_'+domain+'.asc', lon, fmt='%4.5f', header = head,comments='')
 
 
 # # Execute functions
@@ -225,11 +225,11 @@ def LTLN2SM(INfile,OUTpath):
 
 
 # generate topo
-INfile = dataPath+'DEM'+domain+'.tif'
-DEM2SM(INfile, OUT_DEMpath)
+INfile = dataPath+'DEM_'+domain+'.tif'
+DEM2SM(INfile, dataPath)
 #generate veg
-INfile = dataPath+'NLCD2016'+domain+'.tif'
-LC2SM(INfile, OUT_LCpath)
+INfile = dataPath+'NLCD2016_'+domain+'.tif'
+LC2SM(INfile, dataPath)
 #generate lat lon grids
 LTLN2SM(INfile,dataPath)
 
