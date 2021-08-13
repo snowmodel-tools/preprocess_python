@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[9]:
+# In[1]:
 
 
 import ee
@@ -29,7 +29,7 @@ TIFpath = 'GEE_Downloads/'
 
 # DOMAIN
 # choose the modeling domain
-domain = 'CO_N'
+domain = 'CO_S'
 
 # path to directory where you want your output .tif and .asc files
 dataPath = '/nfs/attic/dfh/Aragon2/CSOdmn/'+domain+'/'
@@ -110,7 +110,7 @@ get_topoveg(domain, dataPath)
 
 # # DEM
 
-# In[16]:
+# In[5]:
 
 
 # dem
@@ -118,7 +118,7 @@ def DEM2SM(INfile, OUTpath):
     da = xr.open_rasterio(INfile)
     
     #ascii header 
-    head = "ncols "+str(da.shape[2])+"\n"     "nrows "+str(da.shape[1])+"\n"     "xllcorner     "+str(int(min(da.x.values)-da.res[0]/2))+"\n"     "yllcorner     "+str(int(min(da.y.values)-da.res[0]/2))+"\n"     "cellsize      "+str(int(da.res[0]))+"\n"     "NODATA_value  -9999"    
+    head = "ncols\t"+str(da.shape[2])+"\n"     "nrows\t"+str(da.shape[1])+"\n"     "xllcorner\t"+str(int(min(da.x.values)-da.res[0]/2))+"\n"     "yllcorner\t"+str(int(min(da.y.values)-da.res[0]/2))+"\n"     "cellsize\t"+str(int(da.res[0]))+"\n"     "NODATA_value\t-9999"    
     
     np.savetxt(OUTpath+'DEM_'+domain+'.asc', np.squeeze(da.values), fmt='%d', header = head,comments='')
 
@@ -158,7 +158,7 @@ def DEM2SM(INfile, OUTpath):
 # |11    | low shrub tundra |23    | short crops |        
 # |12    | grassland rangeland  |24    | ocean |    
 
-# In[21]:
+# In[6]:
 
 
 # landcover data 
@@ -167,7 +167,7 @@ def LC2SM(INfile,OUTpath):
     data = np.squeeze(da.values)
 
     #ascii header 
-    head = "ncols "+str(da.shape[2])+"\n"     "nrows "+str(da.shape[1])+"\n"     "xllcorner     "+str(int(min(da.x.values)-da.res[0]/2))+"\n"     "yllcorner     "+str(int(min(da.y.values)-da.res[0]/2))+"\n"     "cellsize      "+str(int(da.res[0]))+"\n"     "NODATA_value  -9999"
+    head = "ncols\t"+str(da.shape[2])+"\n"     "nrows\t"+str(da.shape[1])+"\n"     "xllcorner\t"+str(int(min(da.x.values)-da.res[0]/2))+"\n"     "yllcorner\t"+str(int(min(da.y.values)-da.res[0]/2))+"\n"     "cellsize\t"+str(int(da.res[0]))+"\n"     "NODATA_value\t-9999"
     
     #reassign lc from NLCD to SM classes
     DIR=np.empty([da.shape[1],da.shape[2]])
@@ -192,7 +192,7 @@ def LC2SM(INfile,OUTpath):
     DIR[data == 90 ]=9
     DIR[data == 95 ]=9
     DIR.astype(int)
-    np.savetxt(OUTpath+'NLC2016_'+domain+'.asc', DIR, fmt='%d', header = head,comments='')
+    np.savetxt(OUTpath+'NLCD2016_'+domain+'.asc', DIR, fmt='%d', header = head,comments='')
 
 
 # # Lat long grids
@@ -214,14 +214,14 @@ def LTLN2SM(INfile,OUTpath):
     lat = np.asarray(lat).reshape((ny, nx))
 
     #ascii header 
-    head = "ncols "+str(da.shape[2])+"\n"     "nrows "+str(da.shape[1])+"\n"     "xllcorner     "+str(int(min(da.x.values)-da.res[0]/2))+"\n"     "yllcorner     "+str(int(min(da.y.values)-da.res[0]/2))+"\n"     "cellsize      "+str(int(da.res[0]))+"\n"     "NODATA_value  -9999"
+    head = "ncols\t"+str(da.shape[2])+"\n"     "nrows\t"+str(da.shape[1])+"\n"     "xllcorner\t"+str(int(min(da.x.values)-da.res[0]/2))+"\n"     "yllcorner\t"+str(int(min(da.y.values)-da.res[0]/2))+"\n"     "cellsize\t"+str(int(da.res[0]))+"\n"     "NODATA_value\t-9999"
     np.savetxt(OUTpath+'grid_lat_'+domain+'.asc', lat, fmt='%2.5f', header = head,comments='')
     np.savetxt(OUTpath+'grid_lon_'+domain+'.asc', lon, fmt='%4.5f', header = head,comments='')
 
 
 # # Execute functions
 
-# In[17]:
+# In[8]:
 
 
 # generate topo
@@ -232,4 +232,10 @@ INfile = dataPath+'NLCD2016_'+domain+'.tif'
 LC2SM(INfile, dataPath)
 #generate lat lon grids
 LTLN2SM(INfile,dataPath)
+
+
+# In[ ]:
+
+
+
 
