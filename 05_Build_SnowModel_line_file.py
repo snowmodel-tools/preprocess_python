@@ -20,7 +20,7 @@ import rasterio as rio
 
 # DOMAIN
 # choose the modeling domain
-domain = 'WY'
+domain = 'CO_S'
 
 # PATHS
 # path to domain data folder 
@@ -37,16 +37,16 @@ def build_snowmodel_line(domain,dataPath):
     DEMpath = dataPath+'DEM_'+domain+'.asc'
 
     #path to SNOTEL gdf
-    gdfpath = dataPath+'CSO_SNOTEL_sites.geojson'
+    gdfpath = dataPath+'CSO_SNOTEL_sites_'+domain+'.geojson'
 
     #path to VEG .asc
     VEGpath = dataPath+'NLCD2016_'+domain+'.asc'
 
     #path to lat .asc
-    LATpath = dataPath+'grid_lat.asc'
+    LATpath = dataPath+'grid_lat_'+domain+'.asc'
 
     #path to lon .asc
-    LONpath = dataPath+'grid_lon.asc'
+    LONpath = dataPath+'grid_lon_'+domain+'.asc'
 
     # VEG outfile path
     outVEGpath = dataPath+'NLCD2016_'+domain+'_line.asc'
@@ -58,10 +58,10 @@ def build_snowmodel_line(domain,dataPath):
     outFpath = dataPath+'snowmodel_line_pts.dat'
 
     #lon outfile path
-    outLONpath = dataPath+'grid_lon_line.asc'
+    outLONpath = dataPath+'grid_lon_'+domain+'_line.asc'
 
     #lat outfile path
-    outLATpath = dataPath+'grid_lat_line.asc'
+    outLATpath = dataPath+'grid_lat_'+domain+'_line.asc'
 
     # station data
     stn_gdf = gpd.read_file(gdfpath)
@@ -138,11 +138,11 @@ def build_snowmodel_line(domain,dataPath):
         with codecs.open(filepath, encoding='utf-8-sig') as f:
             data = np.loadtxt(f,skiprows=6)
         data_line=[]
-        for i in range(count.shape[0]):
+        for i in range(stn_gdf.shape[0]):
             info = str(int(data[rows[i],cols[i]]))
             data_line.append(info)
         lines = open(filepath, 'r').readlines()
-        head = 'ncols\t1\nnrows\t'+str(count.shape[0])+'\n'+lines[2]+lines[3]+lines[4]+lines[5]
+        head = 'ncols\t1\nnrows\t'+str(stn_gdf.shape[0])+'\n'+lines[2]+lines[3]+lines[4]+lines[5]
         data = ''
         for s in data_line:
             data += s +'\n'
