@@ -187,10 +187,10 @@ WA_SQ = {
     "ed": "2016-09-30",
     "stn_proj": 'epsg:4326',
     "mod_proj": 'epsg:32610',
-    "ncols": '',
-    "nrows": '',
-    "xll": '',
-    "yll": '',
+    "ncols": '1429',
+    "nrows": '1366',
+    "xll": '594780',
+    "yll": '5226930',
     "cellsize": '30'
 }
 
