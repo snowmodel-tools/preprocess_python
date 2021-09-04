@@ -182,7 +182,7 @@ NH = {
 
 WA_SQ = {
     "name": 'WA_SQ',
-    "Bbox": {'latmax' : 44.328173,'latmin' : 43.901758,'lonmax': -71.009589,'lonmin': -71.754594,},
+    "Bbox": {'latmax' : 47.550,'latmin' : 47.189,'lonmax': -121.183,'lonmin': -121.740,},
     "st": "2011-10-01",
     "ed": "2016-09-30",
     "stn_proj": 'epsg:4326',
