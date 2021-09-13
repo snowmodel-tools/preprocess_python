@@ -55,7 +55,7 @@ UT = {
 
 WA = {
     "name": 'WA',
-    "Bbox": {'latmax' : 48.98,'latmin' : 47.8299,'lonmax': -119.769,'lonmin': -121.1,},
+    "Bbox": {'latmax' : 48.9,'latmin' : 47.8299,'lonmax': -119.769,'lonmin': -121.1,},
     "st": "2011-10-01", 
     "ed": "2016-09-30",
     "stn_proj": 'epsg:4326',
