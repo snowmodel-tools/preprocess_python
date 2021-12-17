@@ -29,7 +29,7 @@ TIFpath = 'GEE_Downloads/'
 
 # DOMAIN
 # choose the modeling domain
-domain = 'CO_S'
+domain = 'MT'
 
 # path to directory where you want your output .tif and .asc files
 dataPath = '/nfs/attic/dfh/Aragon2/CSOdmn/'+domain+'/'
@@ -171,7 +171,7 @@ def LC2SM(INfile,OUTpath):
     
     #reassign lc from NLCD to SM classes
     DIR=np.empty([da.shape[1],da.shape[2]])
-    DIR[data == 11 ]=24
+    DIR[data == 11 ]=19
     DIR[data == 12 ]=20
     DIR[data == 21 ]=21
     DIR[data == 22 ]=21
