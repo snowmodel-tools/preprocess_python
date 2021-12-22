@@ -13,6 +13,7 @@ import pandas as pd
 import xarray as xr
 from os import listdir
 from datetime import datetime, timedelta, date
+import contextlib
 
 # Initialize the Earth Engine module
 ee.Initialize()
@@ -23,13 +24,17 @@ ee.Initialize()
 #########################################################################
 # DOMAIN
 # choose the modeling domain
-domain = 'CA'
+domain = 'WA_SQ'
+print(domain)
+#path to CSO domains
+domains_resp = requests.get("https://raw.githubusercontent.com/snowmodel-tools/preprocess_python/master/CSO_domains.json")
+domains = domains_resp.json()
 
 # PATHS
 # path to temporary folder to store tif files from gee
-TIFpath = 'GEE_Downloads/'
+TIFpath = 'GEE_Downloads_tmp/'
 # path to where you want your output met .dat fime
-OUTpath = '/nfs/attic/dfh/Aragon2/CSOdmn/'+domain+'/mm_WY_2018-2019.dat'
+OUTpath = 'tst.dat'#'/nfs/attic/dfh/Aragon2/CSOdmn/'+domain+'/mm_'+domain+'_2011-2016.dat'
 
 # TIME
 # choose if want to set 'manual' or 'auto' date 
@@ -37,8 +42,8 @@ date_flag = 'manual'
 # If you choose 'manual' set your dates below  
 # This will start on the 'begin' date at 0:00 and the last iteration will 
 # be on the day before the 'end' date below.
-st_dt = '2011-09-01'
-ed_dt = '2016-09-30'
+st_dt = '2011-10-01'#domains[domain]['st']
+ed_dt = '2011-10-01'#domains[domain]['ed']
 #########################################################################
 
 
@@ -59,7 +64,7 @@ def set_dates(st_dt,ed_dt,date_flag):
         stdt = str(styr)+'-10-01'
     elif date_flag == 'manual':
         stdt = st_dt
-        eddt = ed_dt
+        eddt = (datetime.strptime(ed_dt,'%Y-%m-%d') + timedelta(days = 1)).strftime('%Y-%m-%d')
     return stdt, eddt
 
 
@@ -101,7 +106,7 @@ def get_cfsv2(domain, TIFpath, stdt, eddt):
     maxLongMET = (maxLong + 0.5);
 
     # This resolution for the NLCD and DEM outputs for the SnowModel domain in meters
-    sm_resolution = 100
+    sm_resolution = int(domains[domain]['cellsize'])
 
     '''// Resolution for the PRISM output. This shoud change by Latitude of the domain
     // because the PRISM product spatial resolution is 2.5 minutes, which equals 150 arc seconds.
@@ -126,7 +131,8 @@ def get_cfsv2(domain, TIFpath, stdt, eddt):
     cfsv2 = ee.ImageCollection('NOAA/CFSV2/FOR6H')         .filterBounds(my_domain_met)         .filter(ee.Filter.date(stdt,eddt))
 
     data = cfsv2.select('Temperature_height_above_ground',         'Geopotential_height_surface',         'u-component_of_wind_height_above_ground',         'v-component_of_wind_height_above_ground',         'Pressure_surface',         'Specific_humidity_height_above_ground',         'Precipitation_rate_surface_6_Hour_Average')
-    geemap.ee_export_image_collection(data, out_dir=TIFpath,region=my_domain_met,scale=22200,crs=epsg_code)
+    with contextlib.redirect_stdout(None):
+        geemap.ee_export_image_collection(data, out_dir=TIFpath,region=my_domain_met,scale=22200,crs=epsg_code)
 
 
 # function to check for missing dates
@@ -147,7 +153,7 @@ def missing_slice_check(stdt, eddt, TIFpath):
 
     # check for to see if all time slices downloaded from GEE
     if len(timesin) != len(gee_times):
-        print('gee is missing timeslice(s):\n',timesin[~timesin.isin(gee_times)].values[0])
+        print('gee is missing timeslice(s):\n',timesin[~timesin.isin(gee_times)].values)
         
         # if 4 or more consecutive timeslices are missing - quit the function
         duration = []
@@ -163,18 +169,18 @@ def missing_slice_check(stdt, eddt, TIFpath):
             missing_idx = np.where(~timesin.isin(gee_times))
             missing_dt = timesin[missing_idx]
             for j in range(len(missing_dt)):
-                if missing_idx[j] == 0:
+                if np.squeeze(missing_idx)[j] == 0:
                     print('choose earlier start date so missing time slices can be filled in')
                 else:
-                    pre_dt = TIFpath+timesin[missing_idx[j]-1].strftime('%Y%m%d%H')[0]+'.tif'
-                    mis_dt = TIFpath+timesin[missing_idx[j]].strftime('%Y%m%d%H')[0]+'.tif' 
+                    pre_dt=TIFpath+timesin[np.squeeze(missing_idx)[j]-1].strftime('%Y%m%d%H')+'.tif'
+                    mis_dt = TIFpath+timesin[np.squeeze(missing_idx)[j]].strftime('%Y%m%d%H')+'.tif' 
                     get_ipython().system('cp $pre_dt $mis_dt')
-                    print('replaced', timesin[missing_idx[j]].strftime('%Y%m%d%H')[0],' with ', timesin[missing_idx[j]-1].strftime('%Y%m%d%H')[0])
+                    print('replaced', timesin[np.squeeze(missing_idx)[j]].strftime('%Y%m%d%H'),' with ', timesin[np.squeeze(missing_idx)[j]-1].strftime('%Y%m%d%H'))
+
 
 
 # Format gee files for SnowModel function
 def MET2SM(TIFpath, OUTpath, stdt, eddt):
-    
     # create a 6-hourly timeseries with no missing values from the start to end date
     timesin = pd.date_range(start=stdt, end=eddt, freq='6H')[:-1]
     
@@ -203,6 +209,7 @@ def MET2SM(TIFpath, OUTpath, stdt, eddt):
         P[i,:,:] = ar[4,:,:]
         H[i,:,:] = ar[5,:,:]
         PR[i,:,:] = ar[6,:,:]
+        
 
     #number of timesteps per dat 
     pointsperday = 4
