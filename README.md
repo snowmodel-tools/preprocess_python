@@ -20,17 +20,35 @@ Preprocess inputs:
 ## The notebooks should be completed in the following order for each modeling domain:
 
 ####       1. DomainBounds_2json.ipynb
-Notebook to create a JSON containing bounding parameters for all modeling domains. Add new domains here. 
+Notebook to create a JSON containing bounding parameters for all modeling domains. The output json file can be referenced by later scripts/notebooks using the requests package. Add new domains here. 
 
-####       2. Fetch_SNOTEL_CSO.ipynb
-Notebook to get SNOTEL station data within a modeling domain.
+NOTE: This notebook needs to be run twice. On the first run, the user designates all domains, and includes the following details:
+* Domain name
+* Bounding box with latmax, latmin, lonmax, lonmin
+* Start date
+* End date
+* Station projection (epsg:4326 in US)
+* Model projection
+ 
+After the CSO_domains.json is pushed to github, 02_GEE_topoveg.ipynb can be run. Ues the DEM or landcover ascii files for each domain to fill in the ncols, nrows, xll, yll values for each domain.
 
-Files saved out:
-* .geojson of SNOTEL stations within modeling domain
-* .csv of swe and snow depth data for SNOTEL stations over time period of interest
+### 02_GEE_topoveg.ipynb
 
-####       3. Build_SnowModel_line_file.ipynb
-Notebook to create files to run SnowModel in line mode for calibration.
+Notebook to pull dem and landcover data from GEE and prep ascii files for input into SnowModel. These ascii files will provide missing information (ncols, nrows, xll, yll) for the json. 
+
+
+### 03_met_data.py 
+
+Notebook to pull meteorological data from GEE and prep ascii files for input into SnowModel. 
+
+
+### 04_Fetch_SNOTEL_CSO.ipynb
+
+Notebook to get SNOTEL station data within a modeling domain to be used for the calibration.
+
+### 05_Build_SnowModel_line_file.ipynb
+
+Notebook to create a file to run SnowModel in line mode for the calibration. This notebook generates input files so that Snowmodel is only run at the cell(s) that correspond to station data. 
 
 Files saved out:
 * snowmodel_line_pts.dat
@@ -39,16 +57,7 @@ Files saved out:
 * .asc of line lat values
 * .asc of line lon values
 
-## (optional notebooks)
+### 06_GET_MET.ipynb
 
-####       Baseline_par2json.ipynb
-Notebook to extract .par values and save them to a JSON. 
+Notebook to compare downscaled met outputs from MicroMet to station met data.
 
-####       Explore_SNOTEL.ipynb
-Notebook to examine SNOTEL stations within a modeling domain.
-
-####       Extract_data_from_raster.ipynb
-Notebook to extract raster values at SNOTEL locations.
-
-####       Set_baseSM.ipynb
-Notebook to set the SnowModel .par file to baseline values.
