@@ -24,7 +24,7 @@ ee.Initialize()
 #########################################################################
 # DOMAIN
 # choose the modeling domain
-domain = 'CHU'
+domain = 'MH'
 print(domain)
 #path to CSO domains
 domains_resp = requests.get("https://raw.githubusercontent.com/snowmodel-tools/preprocess_python/master/CSO_domains.json")
@@ -34,7 +34,7 @@ domains = domains_resp.json()
 # path to temporary folder to store tif files from gee
 TIFpath = 'GEE_Downloads_tmp/'
 # path to where you want your output met .dat fime
-OUTpath = '/nfs/attic/dfh/Aragon2/CSOdmn/CHU/mm_'+domain+'_2015-2019.dat'
+OUTpath = '/nfs/attic/dfh/Aragon2/CSOdmn/MH/mm_'+domain+'_2015-2019.dat'
 
 # TIME
 # choose if want to set 'manual' or 'auto' date 
