@@ -24,7 +24,7 @@ ee.Initialize()
 #########################################################################
 # DOMAIN
 # choose the modeling domain
-domain = 'ST'
+domain = 'GOA'
 print(domain)
 #path to CSO domains
 domains_resp = requests.get("https://raw.githubusercontent.com/snowmodel-tools/preprocess_python/master/CSO_domains.json")
@@ -34,7 +34,7 @@ domains = domains_resp.json()
 # path to temporary folder to store tif files from gee
 TIFpath = 'GEE_Downloads_tmp/'
 # path to where you want your output met .dat fime
-OUTpath = '/nfs/attic/dfh/Aragon2/CSOdmn/MH/mm_'+domain+'_2015-2019.dat'
+OUTpath = '/nfs/attic/dfh/Hill/GOA_snowmodel/GOA_new_runs/snowpack/met/mm_'+domain+'_2020-2022.dat'
 
 # TIME
 # choose if want to set 'manual' or 'auto' date 
@@ -42,8 +42,8 @@ date_flag = 'manual'
 # If you choose 'manual' set your dates below  
 # This will start on the 'begin' date at 0:00 and the last iteration will 
 # be on the day before the 'end' date below.
-st_dt = '2015-10-01'#domains[domain]['st']
-ed_dt = '2019-09-30'#domains[domain]['ed']
+st_dt = '2020-09-01'#domains[domain]['st']
+ed_dt = '2022-08-31'#domains[domain]['ed']
 #########################################################################
 
 
