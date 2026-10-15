@@ -24,7 +24,7 @@ ee.Initialize(project='sunny-emissary-318920')
 #########################################################################
 # DOMAIN
 # choose the modeling domain (USER MUST SET THIS)
-domain = 'TR'
+domain = 'ST_Mores_Watershed'
 print(domain)
 #path to CSO domains
 domains_resp = requests.get("https://raw.githubusercontent.com/snowmodel-tools/preprocess_python/master/CSO_domains.json")
@@ -35,7 +35,8 @@ domains = domains_resp.json()
 TIFpath = 'GEE_Downloads_tmp/'
 # path to where you want your output met .dat fime
 #OUTpath = '/nfs/attic/dfh/Hill/GOA_snowmodel/GOA_new_runs/snowpack/met/mm_'+domain+'_2020-2022.dat'
-OUTpath = '/nfs/attic/dfh/Hill/USBR/test_ca_domain/met/mm_'+domain+'.dat'
+#OUTpath = '/nfs/attic/dfh/Hill/USBR/test_ca_domain/met/mm_'+domain+'.dat'
+OUTpath = '/nfs/attic/dfh/Aragon2/CSOdmn/ST_Mores_Watershed/mm_'+domain+'.dat'
 
 # TIME
 # choose if want to set 'manual' or 'auto' date 
@@ -43,8 +44,8 @@ date_flag = 'manual'
 # If you choose 'manual' set your dates below  
 # This will start on the 'begin' date at 0:00 and the last iteration will 
 # be on the day before the 'end' date below.
-st_dt = '2021-10-01'#domains[domain]['st']
-ed_dt = '2022-09-30'#domains[domain]['ed']
+st_dt = '2016-10-01'#domains[domain]['st']
+ed_dt = '2020-09-30'#domains[domain]['ed']
 print(st_dt)
 print(ed_dt)
 #########################################################################
